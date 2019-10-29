@@ -5,7 +5,85 @@ date: "10/28/2019"
 output: html_document
 ---
 
-```{r}
-
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error=TRUE)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(ggplot2)
+library(astsa)
+library(splines)
+library(tidyr)
 ```
+
+```{r}
+historical.prices<-read.csv("historical_soybean_prices.csv")
+```
+
+```{r}
+#clean the data
+historical.prices<-
+  historical.prices%>%
+  separate("date",c("Month","Day","Year"))
+
+first_part<-historical.prices[1:7828,]
+View(first_part)
+
+second_part<-historical.prices[7829:nrow(historical.prices),]
+
+first_part<-
+  first_part%>%
+  mutate(Year = as.numeric(Year)+1900)
+second_part<-
+  second_part%>%
+  mutate(Year = as.numeric(Year)+2000)
+historical.prices<- rbind(first_part,second_part)
+  
+historical.prices<-
+  historical.prices%>%
+  mutate(Date = paste(Year,Month,Day, sep ="/"))%>%
+  mutate(Date = as.Date(Date))
+
+
+max(historical.prices$Date, na.rm = TRUE)
+
+date_begin <- as.Date("1968/12/05", tryFormats = c("%Y/%m/%d"))
+date_end <- as.Date("2019/10/25", tryFormats = c("%Y/%m/%d"))
+
+
+historical.prices <-
+  historical.prices%>%
+  complete(Date = seq.Date(date_begin, date_end, by="day"))
+
+historical.prices<-
+  historical.prices%>%
+  mutate(Month = month(Date))%>%
+  mutate(Day = day(Date))%>%
+  mutate(Year = year(Date))%>%
+  mutate(wday = wday(Date))
+
+historical.prices
+```
+```{r}
+#ts is hard because there is not frequent data
+prices<-ts(historical.prices$value, start = c(1968,12,05), frequency = 365)
+
+plot(prices)
+
+p1<-historical.prices%>%
+  filter(Year>2015, Year<2019)
+min(p1$Date)
+p1_ts<-ts(p1$value, start = c(2016,01,01),frequency = 365)
+plot(p1_ts)
+```
+
+
+```{r}
+historical.prices%>%
+  group_by(Month) %>%
+  summarize(val = mean(value))%>%
+  ggplot(aes(Month, val)) + geom_bar(stat = 'identity')
+```
+
+
 
