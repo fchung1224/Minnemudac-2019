@@ -71,18 +71,25 @@ prices<-ts(historical.prices$value, start = c(1968,12,05), frequency = 365)
 plot(prices)
 
 p1<-historical.prices%>%
-  filter(Year>2015, Year<2019)
+  filter(Year>2006 & Year<2019)
 min(p1$Date)
-p1_ts<-ts(p1$value, start = c(2016,01,01),frequency = 365)
+p1_ts<-ts(p1$value, start = c(2007,01,01),frequency = 365)
 plot(p1_ts)
 ```
 
 
 ```{r}
-historical.prices%>%
-  group_by(Month) %>%
-  summarize(val = mean(value))%>%
-  ggplot(aes(Month, val)) + geom_bar(stat = 'identity')
+oil<-read.csv("DCOILWTICO.csv")
+
+oil$DCOILWTICO<- as.numeric(oil$DCOILWTICO)
+
+
+oil
+date_begin <- as.Date("1986/01/02", tryFormats = c("%Y/%m/%d"))
+
+oil_ts<- ts(oil$DCOILWTICO, start =c(1986,01,02), frequency = 365 )
+
+plot(oil_ts)
 ```
 
 
