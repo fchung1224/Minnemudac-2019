@@ -14,6 +14,9 @@ library(ggplot2)
 library(astsa)
 library(splines)
 library(tidyr)
+library(naniar)
+library(BBmisc)
+library(gam)
 ```
 
 ```{r}
@@ -62,8 +65,10 @@ historical.prices<-
   mutate(Year = year(Date))%>%
   mutate(wday = wday(Date))
 
-historical.prices
+write.csv(historical.prices, "soybeans.csv")
 ```
+
+
 ```{r}
 #ts is hard because there is not frequent data
 prices<-ts(historical.prices$value, start = c(1968,12,05), frequency = 365)
@@ -71,26 +76,84 @@ prices<-ts(historical.prices$value, start = c(1968,12,05), frequency = 365)
 plot(prices)
 
 p1<-historical.prices%>%
-  filter(Year>2006 & Year<2019)
+  filter(Year>2017)
 min(p1$Date)
-p1_ts<-ts(p1$value, start = c(2007,01,01),frequency = 365)
+p1_ts<-ts(p1$value, start = c(2018,01,01),frequency = 365)
 plot(p1_ts)
+
+historical.prices$value
 ```
 
 
 ```{r}
 oil<-read.csv("DCOILWTICO.csv")
-
-oil$DCOILWTICO<- as.numeric(oil$DCOILWTICO)
-
-
 oil
+
+oil$DCOILWTICO<-as.numeric(as.character(oil$DCOILWTICO))
+oil
+
+oil$DCOILWTICO<-na_if(oil$DCOILWTICO,".")
+
+oil$DATE<- as.Date(oil$DATE)
+oil
+
 date_begin <- as.Date("1986/01/02", tryFormats = c("%Y/%m/%d"))
+date_end<-as.Date("2019/10/21", tryFormats = c("%Y/%m/%d"))
 
-oil_ts<- ts(oil$DCOILWTICO, start =c(1986,01,02), frequency = 365 )
+oil <-
+  oil%>%
+  complete(DATE = seq.Date(date_begin, date_end, by="day"))%>%
+  mutate(Month = month(DATE))%>%
+  mutate(Day = day(DATE))%>%
+  mutate(Year = year(DATE))%>%
+  mutate(wday = wday(DATE))
 
-plot(oil_ts)
+
+oil$DCOILWTICO<- as.double(oil$DCOILWTICO)
+oil
+
 ```
 
+```{r}
+oil_ts<- ts(oil$DCOILWTICO, start =c(1986,01,02), frequency = 365 )
+
+plot(oil_ts, col = "black")
+```
+
+```{r}
+#CORRELATION IS NOT CAUSATION
+join<-
+  historical.prices%>%
+  left_join(oil)
+
+join%>%
+  filter(Year>1990)
+
+cor(join$value,join$DCOILWTICO, use = "complete.obs")
+```
+
+```{r}
+ggplot(historical.prices)+
+  geom_line(aes(x = Date, y = normalize(value)))+
+  geom_line(data = oil, aes(x = DATE, y = normalize(DCOILWTICO), color = "oil"))+
+  theme_minimal()+
+  ggtitle("Historical Normalized Soybean Prices and Oil Prices")
+
+normalize(historical.prices$value)
+
+LOESS_Soybean<- loess(value ~ decimal_date(Date), data = historical.prices, span = 0.5)
+
+historical.prices_na<-historical.prices[complete.cases(historical.prices), ]
+
+historical.prices_na
+
+ggplot(historical.prices_na)+
+  geom_line(aes(x = Date, y = value))+
+  geom_line(aes(x = Date, y = predict(Soybean_gam),color = "Loess"))
+```
+
+```{r}
+
+```
 
 
