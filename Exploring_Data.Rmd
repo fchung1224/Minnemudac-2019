@@ -110,8 +110,6 @@ oil <-
 
 
 oil$DCOILWTICO<- as.double(oil$DCOILWTICO)
-oil
-
 ```
 
 ```{r}
@@ -141,18 +139,44 @@ ggplot(historical.prices)+
 
 normalize(historical.prices$value)
 
-LOESS_Soybean<- loess(value ~ decimal_date(Date), data = historical.prices, span = 0.5)
+LOESS_Soybean<- loess(value ~ decimal_date(Date), data = historical.prices, span = 50/18586)
 
-historical.prices_na<-historical.prices[complete.cases(historical.prices), ]
-
-historical.prices_na
 
 ggplot(historical.prices_na)+
   geom_line(aes(x = Date, y = value))+
-  geom_line(aes(x = Date, y = predict(Soybean_gam),color = "Loess"))
+  geom_line(aes(x = Date, y = predict(LOESS_Soybean),color = "Loess"))
+```
+```{r}
+
+historical.prices
+
+gam_model <- train(
+      Grad.Rate~.,
+      data = model_data,
+      method = "gamLoess",
+      tuneGrid = data.frame(span = seq(0.1, 1, length = 10), degree = 1),
+      trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+      metric = "MAE",
+      na.action = na.omit
+    )
+
+set.seed(253)
+LOESS_Soybean<-
+  train(
+    value~Date,
+    data = historical.prices,
+    method = "gamLoess",
+    tuneGrid = data.frame(span = seq(0.01, 1, length = 10),degree =1),
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "oneSE"),
+    metric = "MAE",
+    na.action = na.omit
+  )
 ```
 
+
 ```{r}
+library(forecast)
+fitma <- auto.arima(prices, max.p=0, stationary=TRUE, seasonal=FALSE)
 
 ```
 
