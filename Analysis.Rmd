@@ -23,3 +23,104 @@ library(gam)
 all<-read.csv("soybean_full.csv")
 ```
 
+```{r}
+all<-
+  all%>%
+  mutate(Date = as.Date(Date, tryFormats = c("%Y-%m-%d")))%>%
+  mutate(decimal_date = decimal_date(Date))
+
+all
+
+selected<-
+  all%>%
+  select(-c(X,Date,Year,Month,Quarter,decimal_date))
+
+selected
+
+lm_all<-lm(Soybean~Oil+CPI+PPI+US_GDP+CHN_GDP+D0+D1+D2+D3+D4,data =all)
+summary(lm_all)
+```
+```{r}
+#residual plots
+nrow(all)
+length(lm_all$residuals)
+
+residual_plot<-
+  all%>%
+  mutate(fitted = predict(lm_all,all),residual = Soybean - fitted)
+
+residual_plot%>%
+  ggplot(aes(x = decimal_date,y = residual))+
+  geom_point()+
+  geom_hline(yintercept = 0)
+```
+
+```{r}
+#backwise stepwise regression
+library(caret)
+set.seed(253)
+backstep_model <- train(
+    Soybean ~ .,
+    data = selected,
+    method = "leapBackward",
+    tuneGrid = data.frame(nvmax = 1:ncol(selected)),
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "oneSE"),
+    metric = "MAE",
+    na.action = na.omit
+)
+coef(backstep_model$finalModel, id = backstep_model$bestTune$nvmax)
+```
+```{r}
+Import<-read.csv("ussuppliers.csv")
+Export<-read.csv("competitors.csv")
+Overall<-read.csv("overall.csv")
+```
+
+```{r}
+#Lasso
+
+# Define a range of lambda tuning parameters to try
+# The following is a starting point, but should be tweaked in each context
+
+Export_selected<-
+  Export%>%
+  select(-c(Month,Year))
+
+
+lambda_grid <- 10^seq(-3, 1, length = 100)
+set.seed(253)
+# Perform LASSO
+lasso_model <- train(
+    Soybeans ~ .,
+    data = Export_selected,
+    method = "glmnet",
+    tuneGrid = data.frame(alpha = 1, lambda = lambda_grid),
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "best"),
+    metric = "MAE",
+    na.action = na.omit
+)
+
+coef(lasso_model$finalModel, lasso_model$bestTune$lambda)
+
+lasso_model$finalModel$lambda
+```
+
+```{r}
+set.seed(253)
+backstep_model <- train(
+    Soybeans ~ .,
+    data = Export_selected,
+    method = "leapBackward",
+    tuneGrid = data.frame(nvmax = 1:ncol(selected)),
+    trControl = trainControl(method = "cv", number = 10, selectionFunction = "oneSE"),
+    metric = "MAE",
+    na.action = na.omit
+)
+coef(backstep_model$finalModel, id = backstep_model$bestTune$nvmax)
+
+
+```
+
+
+
+
