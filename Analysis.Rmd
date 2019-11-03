@@ -1,0 +1,25 @@
+---
+title: "soybean_analysis"
+author: "Federico Chung"
+date: "11/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error=TRUE)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(ggplot2)
+library(astsa)
+library(splines)
+library(tidyr)
+library(naniar)
+library(BBmisc)
+library(gam)
+```
+
+```{r}
+all<-read.csv("soybean_full.csv")
+```
+
